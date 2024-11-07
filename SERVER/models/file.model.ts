@@ -18,7 +18,7 @@ interface IFile {
 const FileSchema: Schema = new Schema({
     name: { type: String, required: true },
     size: { type: Number, required: true },
-    hash_info: { type: String, required: true, unique: true },
+    hash_info: { type: String, required: true },
     peer: {
         type: new mongoose.Schema({
             address: { type: String, required: true },

@@ -8,7 +8,6 @@ def fetch_all_file(base_url):
 def publish_file(server_urls, file_name, file_size, file_hash_info, address, port):
     for server_url in server_urls:
             try:
-                print(file_name, file_size, file_hash_info, address, port)
                 response = requests.post(f'{server_url}/api/files/publish', json = {
                     'name': file_name,
                     'size': file_size,
@@ -18,13 +17,15 @@ def publish_file(server_urls, file_name, file_size, file_hash_info, address, por
                         'port': port
                     }
                 })
+                response.raise_for_status()
+            except requests.exceptions.RequestException as e:
                 try:
-                    json_response = response.json()
-                    print(f"Response JSON: {json_response}")
-                except ValueError:
-                    print("Response is not in JSON format.")
-            except Exception as e:
-                print(f"An error occurred: {e}")
+                    error_message = e.response.json().get("message", "Unknown error")
+                except (AttributeError, ValueError):
+                    error_message = str(e)
+                print(f"An error occurred: {error_message}")
+            else:
+                print("Publish successfully.")
 
 def initial_hash_info(file_path, hash_algorithm = 'sha1'):
     if hash_algorithm == 'sha1':
@@ -42,7 +43,7 @@ def initial_hash_info(file_path, hash_algorithm = 'sha1'):
 
 def fetch_file_by_hash_info(base_url, hash_info):
     try:
-        return requests.get(f'{base_url}/api/fetch?hash_info={hash_info}')
+        return requests.get(f'{base_url}/api/files/fetch?hash_info={hash_info}')
     except:
         return None
 
