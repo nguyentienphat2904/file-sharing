@@ -9,7 +9,7 @@ Build a `Simple Torrent-like Application` with the protocols defined by each gro
 | --- | ------------------- | ------------ | ------- | 
 | 1   | Nguyễn Tiến Phát    | 2212527      |         | 
 | 2   | Nguyễn Ngọc Diệu Hà | 2210846      |         | 
-| 3   |                     |              |         | 
+| 3   | Nguyễn Sỹ Công      | 2210409      |         | 
 | 4   |                     |              |         | 
       
 ### Phase 1
