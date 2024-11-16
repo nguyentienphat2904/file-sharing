@@ -28,6 +28,7 @@ export class FileController {
                     message: `Fetch file by hash_info successfully`,
                     data: [files]
                 });
+                return;
             } else {
                 files = await FileModel.find({});
                 res.status(200).json({
@@ -35,6 +36,7 @@ export class FileController {
                     message: `Fetch all files successfully`,
                     data: files
                 });
+                return;
             }
 
 
@@ -45,6 +47,7 @@ export class FileController {
                 message: error.message,
                 data: []
             });
+            return;
         }
     };
 
@@ -72,12 +75,14 @@ export class FileController {
                 message: "Upload file sucessfully",
                 data: file
             });
+            return;
         } catch (error: any) {
             res.status(500).json({
                 success: false,
                 message: error.message,
                 data: []
             });
+            return;
         }
     }
 }

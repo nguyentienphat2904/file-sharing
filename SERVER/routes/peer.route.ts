@@ -6,6 +6,6 @@ const peerController = new PeerController();
 
 router.get('/discover', peerController.discover);
 router.get('/ping', peerController.ping);
-router.post('/create', peerController.create);
+router.post('/register', peerController.register)
 
 export default router;

@@ -8,8 +8,8 @@ interface IPeer {
 }
 
 const PeerSchema: Schema = new Schema({
-    address: { type: String, required: true, unique: true },
-    port: { type: String, required: true, unique: true },
+    address: { type: String, required: true },
+    port: { type: String, required: true },
     username: { type: String, required: true, unique: true },
     password: { type: String, required: true, unique: true },
 }, { versionKey: false });

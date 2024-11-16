@@ -1,7 +1,8 @@
-import express, { Request, Response } from "express";
+import express, { NextFunction, Request, Response } from "express";
 import dotenv from "dotenv";
 import fileRouter from "./routes/file.route";
 import peerRouter from "./routes/peer.route";
+import { authMiddleware, login, refreshToken } from "./middleware/auth.middleware";
 
 dotenv.config();
 
@@ -16,8 +17,12 @@ app.get('/', (req: Request, res: Response) => {
     res.send('Like-torrent app')
 });
 
-app.use('/api/files', fileRouter);
-app.use('/api/peers', peerRouter);
+app.post('/refreshToken', refreshToken);
+
+app.post('/login', login);
+
+app.use('/api/files', authMiddleware, fileRouter);
+app.use('/api/peers', authMiddleware, peerRouter);
 
 mongoose.connect(process.env.MONGO_URL)
     .then(() => {
