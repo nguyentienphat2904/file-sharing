@@ -49,7 +49,7 @@
 ```
 ## TRACKER
 
-### Discorver
+### Discover
 - __API__: `/api/peers/discover`
 - __Description__: Lấy danh sách tất cả các peer
 
