@@ -14,7 +14,7 @@ import random
 from prettytable import PrettyTable
 
 HOST = '127.0.0.1'
-PORT = 65432
+PORT = 65431
 
 load_dotenv()
 PIECE_SIZE = int(os.getenv('PIECE_SIZE', '512'))
@@ -24,7 +24,7 @@ def start_peer_server(peer_ip=HOST, peer_port=PORT):
         server_socket.bind((peer_ip, peer_port))
         server_socket.listen()
         print(f"Peer is listening at {peer_ip}:{peer_port}")
-        print("Please type your command:\n")
+        # print("Please type your command:\n")
 
         while True:
             try:
@@ -272,70 +272,30 @@ def download(hash_info, tracker_urls):
     print('Download and announce server successfully')
 
 
-def fetch_file(server_url, hash_info):
+def fetch_file(server_url, hash_info): 
     response = None
     if hash_info:
         response = helper.fetch_file_by_hash_info(server_url, hash_info)
     else:
         response = helper.fetch_all_file(server_url)
-
-    if response and response.status_code == 200 and response.json() and response.json()['data']:
-        table = PrettyTable()
-        table.field_names = ["Info Hash", "Name", "Size (bytes)", "Peers",]
-
-        if(hash_info):
-            data = response.json()['data'][0]
-            peers = data.get('peers', [])
-            peers_str = ', '.join([f"{peer['address']}:{peer['port']}" for peer in peers])
-
-            if(peers):
-                table.add_row([
-                    data.get('hash_info'), 
-                    data.get('name'), 
-                    data.get('size'), 
-                    peers_str
-                ])
-            else:
-                table.add_row([
-                    data.get('hash_info'), 
-                    data.get('name'), 
-                    data.get('size'), 
-                    "No peers"
-                ])
-        else:
-            for item in response.json()['data']:
-                peer = item.get('peer', [])
-                
-                if peer:
-                    table.add_row([
-                        item.get('hash_info'), 
-                        item.get('name'), 
-                        item.get('size'), 
-                        f"{peer.get('address')}:{peer.get('port')}"
-                    ])
-                else:
-                    table.add_row([
-                        item.get('hash_info'), 
-                        item.get('name'), 
-                        item.get('size'), 
-                        "No peers"
-                    ])
-
-        print(table)
+    return response
+    
         
 def publish(file_path, tracker_urls):
     if not os.path.exists(file_path):
         print(f'Path {file_path} does not exist')
-        return
+        return 1
 
     if not os.path.isfile(file_path):
         print(f'{file_path} is not a file')
-        return
+        return 2
     
     hash_info = helper.initial_hash_info(file_path)
     helper.publish_file(tracker_urls, os.path.basename(file_path), int(os.path.getsize(file_path)), hash_info, HOST, PORT)
 
     print('Publish file successfully')
+    return 0
+    
 
 def process_input(cmd):
     params = cmd.split()
@@ -372,21 +332,21 @@ def process_input(cmd):
     except IndexError as e:
         print('Invalid command')
 
-if __name__ == "__main__":
-    try:
-        server_thread = threading.Thread(target=start_peer_server, args=(HOST, PORT))
-        server_thread.start()
+# if __name__ == "__main__":
+#     try:
+#         server_thread = threading.Thread(target=start_peer_server, args=(HOST, PORT))
+#         server_thread.start()
 
-        time.sleep(1)
-        while True:
-            cmd = input('>>')
-            if cmd == 'exit':
-                break
+#         time.sleep(1)
+#         while True:
+#             cmd = input('>>')
+#             if cmd == 'exit':
+#                 break
 
-            process_input(cmd)
+#             process_input(cmd)
 
-    except KeyboardInterrupt:
-        print('\nMessenger stopped by user')
-    finally:
-        print("Cleanup done.")
+#     except KeyboardInterrupt:
+#         print('\nMessenger stopped by user')
+#     finally:
+#         print("Cleanup done.")
         
