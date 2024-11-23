@@ -13,7 +13,7 @@ from queue import Queue
 import random
 from prettytable import PrettyTable
 
-HOST = '127.0.0.1'
+HOST = socket.gethostbyname(socket.gethostname())
 PORT = 65433
 
 load_dotenv()
@@ -376,7 +376,6 @@ if __name__ == "__main__":
     try:
         server_thread = threading.Thread(target=start_peer_server, args=(HOST, PORT))
         server_thread.start()
-
         time.sleep(1)
         while True:
             cmd = input('>>')
