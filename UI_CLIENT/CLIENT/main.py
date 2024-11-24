@@ -3,7 +3,7 @@ import threading
 
 from concurrent.futures import ThreadPoolExecutor
 import traceback
-from helper import main as helper
+from client_helper import main as helper
 import json
 import os
 import time
@@ -13,26 +13,32 @@ from queue import Queue
 import random
 from prettytable import PrettyTable
 
-HOST = '127.0.0.1'
-PORT = 65431
+HOST = socket.gethostbyname(socket.gethostname())
+PORT = 65433
 
 load_dotenv()
 PIECE_SIZE = int(os.getenv('PIECE_SIZE', '512'))
 
+stop_event = threading.Event()
+
 def start_peer_server(peer_ip=HOST, peer_port=PORT):
+    stop_flag = False
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as server_socket:
         server_socket.bind((peer_ip, peer_port))
         server_socket.listen()
         print(f"Peer is listening at {peer_ip}:{peer_port}")
-        # print("Please type your command:\n")
+        print("Please type your command:\n")
 
-        while True:
+        while not stop_event.is_set():
             try:
                 client_socket, client_address = server_socket.accept()
                 print(f"Connected to {client_address}")
                 handle_request(client_socket)
             except Exception as e:
                 print(f"An error occurred while accepting connections: {e}")
+
+def stop_peer_server():
+    stop_event.set()
 
 def handle_request(client_socket):
     with client_socket:
@@ -108,7 +114,7 @@ def connect_to_peer_and_get_file_status(peer_ip, peer_port, hash_info):
         with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
             print("Connecting...")
             s.connect((peer_ip, int(peer_port)))
-            print(f"Connected to {peer_ip}:{peer_port}")
+            # print(f"Connected to {peer_ip}:{peer_port}")
             
             request = {
                 'type': 'GET_FILE_STATUS',
@@ -154,6 +160,26 @@ def connect_to_peer_and_download_file_chunk(peer_ip, peer_port, hash_info, chunk
         else:
             print("Has been received invalid response from peer")
 
+def download(magnet) :
+    def parse_text(input_text):
+        try:
+            # Tách chuỗi bằng dấu '&'
+            parts = input_text.split('&')
+            result = {}
+            
+            # Duyệt qua từng phần và tách thành key-value
+            for part in parts:
+                key, value = part.split('=', 1)  # Tách theo dấu '='
+                result[key] = value
+            
+            # Trả về các giá trị xt, dn, tr
+            return result.get('xt', None), result.get('dn', None), result.get('tr', None)
+    
+        except Exception as e:
+            print(f"Error parsing text: {e}")
+            return None, None, None
+    hash_info, tmp, tracker_urls = parse_text(magnet)
+    download(hash_info, tracker_urls)
 
 def download(hash_info, tracker_urls):
     file_name, file_size, peers_keep_file = helper.get_file_info_and_peers_keep_file(hash_info, tracker_urls)
@@ -272,81 +298,27 @@ def download(hash_info, tracker_urls):
     print('Download and announce server successfully')
 
 
-def fetch_file(server_url, hash_info): 
+def fetch_file(server_url, hash_info):
     response = None
     if hash_info:
         response = helper.fetch_file_by_hash_info(server_url, hash_info)
     else:
         response = helper.fetch_all_file(server_url)
     return response
-    
+
         
 def publish(file_path, tracker_urls):
     if not os.path.exists(file_path):
         print(f'Path {file_path} does not exist')
-        return 1
+        return
 
     if not os.path.isfile(file_path):
         print(f'{file_path} is not a file')
-        return 2
+        return
     
     hash_info = helper.initial_hash_info(file_path)
     helper.publish_file(tracker_urls, os.path.basename(file_path), int(os.path.getsize(file_path)), hash_info, HOST, PORT)
 
     print('Publish file successfully')
-    return 0
-    
 
-def process_input(cmd):
-    params = cmd.split()
-
-    if len(params) == 0:
-        return
-    try:
-        if params[0] == 'download':
-            if len(params) == 1:
-                print('Argument hash_info is required')
-            if len(params) == 2:
-                print('Tracker urls must be specified')
-            download(params[1], params[2:])
-        elif params[0] == 'fetch':
-            if len(params) == 1:
-                print('Argument server url is required')
-            elif len(params) == 2:
-                fetch_file(params[1], None)
-            elif len(params) == 3:
-                fetch_file(params[1], params[2])
-            else:
-                raise
-        elif params[0] == 'publish':
-            if len(params) == 1:
-                print('Argument file path is required')
-                return
-            elif len(params) == 2:
-                print('Tracker urls must be specified')
-                return
-            publish(params[1], params[2:])
-        
-        else:
-            print('Invalid command')
-    except IndexError as e:
-        print('Invalid command')
-
-# if __name__ == "__main__":
-#     try:
-#         server_thread = threading.Thread(target=start_peer_server, args=(HOST, PORT))
-#         server_thread.start()
-
-#         time.sleep(1)
-#         while True:
-#             cmd = input('>>')
-#             if cmd == 'exit':
-#                 break
-
-#             process_input(cmd)
-
-#     except KeyboardInterrupt:
-#         print('\nMessenger stopped by user')
-#     finally:
-#         print("Cleanup done.")
         

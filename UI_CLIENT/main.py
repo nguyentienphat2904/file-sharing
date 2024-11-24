@@ -5,8 +5,11 @@ from tkinter import ttk
 from dotenv import load_dotenv
 import os
 import threading
+import time
 
-from CLIENT import main as sevice
+
+from CLIENT import main as service
+from ui_helper import main as auth
 
 
 WIN_WIDTH  = 720
@@ -23,17 +26,42 @@ class App:
         
         self.user_data = {}
 
-        self.main_frame = tk.Frame(root)
+        self.main_frame = tk.Frame(root, background="#F8E6CB")
         self.main_frame.pack(expand=True, fill="both")
 
-        self.create_dashboard_page()
-        # self.create_main_page()
+        self.root.protocol("WM_DELETE_WINDOW", lambda: self.quit_app())
+
+
+        self.start_app()
+        self.create_main_page()
+        # self.create_dashboard_page()
+
+
+
+
+    def start_app(self):
+        try:
+            server_thread = threading.Thread(target=service.start_peer_server, args=(service.HOST, service.PORT))
+            server_thread.start()
+            time.sleep(1)
+        except KeyboardInterrupt:
+            print('\nMessenger stopped by user')
+        finally:
+            print("Cleanup done.")
+
+    def quit_app(self):
+            if messagebox.askokcancel("Thoát ứng dụng", "Bạn có chắc chắn muốn thoát ứng dụng?"):
+                service.stop_peer_server()
+                self.root.destroy()  
 
     def create_main_page(self):
         for widget in self.main_frame.winfo_children():
             widget.destroy()
 
         tk.Label(self.main_frame, text="Welcome to the TORRENT", font=("Arial", 16)).pack(pady=20)
+
+        
+
         
         login_button = tk.Button(self.main_frame, text="Đăng nhập", command=self.create_login_page, width=20)
         login_button.pack(pady=10)
@@ -41,23 +69,23 @@ class App:
         register_button = tk.Button(self.main_frame, text="Đăng ký", command=self.create_register_page, width=20)
         register_button.pack(pady=10)
 
+               
+
 
 #######
     def create_dashboard_page(self):
         for widget in self.main_frame.winfo_children():
             widget.destroy()
 
-        print(BASE_URL)
-        tk.Label(self.main_frame, text="Trang chủ", font=("Arial", 16)).pack(pady=20)
-
-        server_thread = threading.Thread(target=sevice.start_peer_server, args=())
-        server_thread.start()
+        tk.Label(self.main_frame, text="Trang chủ", font=("Arial", 16)).pack(pady=10)
+        
+        
 
         def publish_file(tracker_URL = BASE_URL):
             for item in table.get_children():
                 table.delete(item)
             file_path = filedialog.askopenfilename(title="Chọn file", filetypes=[("Tất cả các file", "*.*")])
-            signal = sevice.publish(file_path, tracker_URL)
+            signal = service.publish(file_path, tracker_URL)
             if signal == 0 :
                 messagebox.showinfo("publish success")
             elif signal == 1 : 
@@ -66,7 +94,7 @@ class App:
                 messagebox.showerror(f"{file_path} is not a file")
 
         def fetch_info_file(service_url = BASE_URL, hash_info = None):
-            response = sevice.fetch_file(BASE_URL,hash_info)
+            response = service.fetch_file(BASE_URL,hash_info)
 
             if response and response.status_code == 200 and response.json() and response.json()['data']:
                 for item in table.get_children():
@@ -116,8 +144,17 @@ class App:
 
 
         tk.Button(self.main_frame, text="Publish File", command=lambda:publish_file(), width=15).pack(pady=10)
-        tk.Button(self.main_frame, text="Fetch File", command=fetch_info_file, width=15).pack(pady=10)
-        
+
+        # UI for FETCH
+        fetch_frame = tk.Frame(self.main_frame)
+        fetch_frame.pack(pady=10)
+
+        fetch_hash_info_entry = tk.Entry(fetch_frame, width=50)
+        fetch_hash_info_entry.pack(side=tk.LEFT, padx=5)  # Đặt Entry ở bên trái
+
+        fetch_button = tk.Button(fetch_frame, text="Fetch File", command=lambda: fetch_info_file(hash_info=fetch_hash_info_entry.get()), width=15)
+        fetch_button.pack(side=tk.LEFT)
+
         columns = (
             ('Info_Hash', WIN_WIDTH / 2),
             ('Name', WIN_WIDTH / 6), 
@@ -129,11 +166,28 @@ class App:
         for col, width in columns :
             table.heading(col, text = col)
             table.column(col, width=int(width), anchor=tk.CENTER)
-        table.pack()
+        table.pack(pady=10)
 
 
+        def download_file(magnet):
+            service.download(magnet)
+
+
+        # UI for DOWNLOAD
+        dowload_frame = tk.Frame(self.main_frame)
+        dowload_frame.pack(pady=10)
+
+        dowload_hash_info_entry = tk.Entry(dowload_frame, width=50)
+        dowload_hash_info_entry.pack(side=tk.LEFT, padx=5)
+
+        download_button = tk.Button(dowload_frame, text="Download File", command=lambda: download_file(dowload_hash_info_entry.get()) ,width=15)
+        download_button.pack(side=tk.LEFT)
+
+
+        def logout ():
+            self.create_main_page()
         
-        tk.Button(self.main_frame, text="Đăng xuất", command=self.create_main_page, width=15).pack(pady=5)
+        tk.Button(self.main_frame, text="Đăng xuất", command=logout, width=15).pack(pady=5)
 
 #######
 
@@ -169,17 +223,23 @@ class App:
             username = username_entry.get().strip()
             password = password_entry.get().strip()
 
-            if username in self.user_data:
-                messagebox.showerror("Lỗi", "Tên đăng nhập đã tồn tại. Vui lòng chọn tên khác!")
-            elif not username or not password:
-                messagebox.showerror("Lỗi", "Tên đăng nhập và mật khẩu không được để trống!")
+            response = auth.resigter_peer(BASE_URL, username, password, service.HOST, service.PORT)
+            if not username or not password :
+                messagebox.showerror("Error", " chưa điền đầy đủ thông tin")
+            if response and response.json() :
+                if response.status_code==500:
+                    messagebox.showerror("error", response.json()["message"]) 
+                elif response.status_code==400:
+                    messagebox.showerror("error", response.json()["message"])
+                else:
+                    messagebox.showinfo("Suscess", response.json()["message"])
+                    self.create_dashboard_page()
             else:
-                self.user_data[username] = password
-                messagebox.showinfo("Thành công", "Đăng ký thành công!")
-                self.create_login_page()
+                messagebox.showerror("error", "Internal server error")
 
         tk.Button(self.main_frame, text="Đăng ký", command=handle_register, width=15).pack(pady=10)
         tk.Button(self.main_frame, text="Quay lại", command=self.create_main_page, width=15).pack(pady=5)
+
 
     def create_login_page(self):
         for widget in self.main_frame.winfo_children():
@@ -206,15 +266,23 @@ class App:
                                                 command=toggle_password)
         show_password_checkbox.pack(pady=5)
 
+
         def handle_login():
             username = username_entry.get().strip()
             password = password_entry.get().strip()
-
-            if username in self.user_data and self.user_data[username] == password:
-                messagebox.showinfo("Thành công", "Đăng nhập thành công!")
-                self.create_dashboard_page()
+            
+            response = auth.login_peer(BASE_URL, username, password)
+            if response and response.json() :
+                if response.status_code==500:
+                    messagebox.showerror("error", response.json()["message"]) 
+                elif response.status_code==400 and response.json()["isSuscess"] != "0":
+                    messagebox.showerror("error", response.json()["message"])
+                else:
+                    messagebox.showinfo("Suscess", response.json()["message"])
+                    self.create_dashboard_page()
             else:
-                messagebox.showerror("Lỗi", "Sai tên đăng nhập hoặc mật khẩu!")
+                messagebox.showerror("error", "Internal server error")
+                
 
         tk.Button(self.main_frame, text="Đăng nhập", command=handle_login, width=15).pack(pady=10)
         tk.Button(self.main_frame, text="Quay lại", command=self.create_main_page, width=15).pack(pady=5)
