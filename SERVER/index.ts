@@ -18,8 +18,8 @@ app.get('/', (req: Request, res: Response) => {
     res.send('Like-torrent app')
 });
 
-app.use('/api/files', authMiddleware, fileRouter);
-app.use('/api/peers', authMiddleware, peerRouter);
+app.use('/api/files', fileRouter);
+app.use('/api/peers', peerRouter);
 app.use('/api/auth', authRouter)
 
 mongoose.connect(process.env.MONGO_URL)

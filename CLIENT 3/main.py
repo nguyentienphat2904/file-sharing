@@ -336,6 +336,23 @@ def publish(file_path, tracker_urls):
     helper.publish_file(tracker_urls, os.path.basename(file_path), int(os.path.getsize(file_path)), hash_info, HOST, PORT)
 
     print('Publish file successfully')
+    # create file status
+    num_of_pieces = math.ceil(int(os.path.getsize(file_path)) / int(PIECE_SIZE))
+    file_name = os.path.basename(file_path).split('/')
+    piece_status = [1 for _ in range(num_of_pieces)]
+    with open('file_status.json', 'r') as f:
+        file_status_data = json.load(f)
+        if not file_status_data.get(hash_info):
+            file_status_data[hash_info] = {
+                'name': file_name[0],
+                'piece_status': piece_status
+            }
+        else:
+            file_status_data[hash_info]['piece_status'] = piece_status
+
+    with open('file_status.json', 'w') as json_file:
+        json.dump(file_status_data, json_file, indent=4)
+
 
 def process_input(cmd):
     params = cmd.split()
@@ -370,7 +387,7 @@ def process_input(cmd):
         else:
             print('Invalid command')
     except IndexError as e:
-        print('Invalid command')
+        print(e)
 
 if __name__ == "__main__":
     try:
