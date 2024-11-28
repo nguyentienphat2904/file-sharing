@@ -310,15 +310,14 @@ def fetch_file(server_url, hash_info):
 def publish(file_path, tracker_urls):
     if not os.path.exists(file_path):
         print(f'Path {file_path} does not exist')
-        return
+        return 1
 
     if not os.path.isfile(file_path):
         print(f'{file_path} is not a file')
-        return
+        return 2
     
     hash_info = helper.initial_hash_info(file_path)
-    helper.publish_file(tracker_urls, os.path.basename(file_path), int(os.path.getsize(file_path)), hash_info, HOST, PORT)
+    return helper.publish_file(tracker_urls, os.path.basename(file_path), int(os.path.getsize(file_path)), hash_info, HOST, PORT)
 
-    print('Publish file successfully')
 
         

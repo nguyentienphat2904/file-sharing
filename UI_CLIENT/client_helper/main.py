@@ -6,26 +6,27 @@ def fetch_all_file(base_url):
     return response
 
 def publish_file(server_urls, file_name, file_size, file_hash_info, address, port):
-    for server_url in server_urls:
-            try:
-                response = requests.post(f'{server_url}/api/files/publish', json = {
-                    'name': file_name,
-                    'size': file_size,
-                    'hash_info': file_hash_info,
-                    'peer': {
-                        'address': address,
-                        'port': port
-                    }
-                })
-                response.raise_for_status()
-            except requests.exceptions.RequestException as e:
-                try:
-                    error_message = e.response.json().get("message", "Unknown error")
-                except (AttributeError, ValueError):
-                    error_message = str(e)
-                print(f"An error occurred: {error_message}")
-            else:
-                print("Publish successfully.")
+    # for server_url in server_urls:
+    try:
+        response = requests.post(f'{server_urls}/api/files/publish', json = {
+            'name': file_name,
+            'size': file_size,
+            'hash_info': file_hash_info,
+            'peer': {
+                'address': address,
+                'port': port
+            }
+        })
+        response.raise_for_status()
+        return 0
+    except requests.exceptions.RequestException as e:
+        try:
+            error_message = e.response.json().get("message", "Unknown error")
+        except (AttributeError, ValueError):
+            error_message = str(e)
+        print(f"An error occurred: {error_message}")
+    print("Publish successfully.")
+    return 1
 
 def initial_hash_info(file_path, hash_algorithm = 'sha1'):
     if hash_algorithm == 'sha1':

@@ -23,9 +23,9 @@ class App:
         self.root = root
         self.root.title("Torrent App")
         self.root.geometry("{}x{}".format(WIN_WIDTH,WIN_HEIGHT))
-        
-        self.user_data = {}
 
+        self.selected_item = None
+        
         self.main_frame = tk.Frame(root, background="#F8E6CB")
         self.main_frame.pack(expand=True, fill="both")
 
@@ -33,8 +33,8 @@ class App:
 
 
         self.start_app()
-        self.create_main_page()
-        # self.create_dashboard_page()
+        # self.create_main_page()
+        self.create_dashboard_page()
 
 
 
@@ -71,8 +71,11 @@ class App:
 
                
 
+#   #   #   #   #   #   #   #   #   #   #   #   #   #   #   #
+#   #   #   #   #   #   #   #   #   #   #   #   #   #   #   #
 
-#######
+
+
     def create_dashboard_page(self):
         for widget in self.main_frame.winfo_children():
             widget.destroy()
@@ -87,11 +90,11 @@ class App:
             file_path = filedialog.askopenfilename(title="Chọn file", filetypes=[("Tất cả các file", "*.*")])
             signal = service.publish(file_path, tracker_URL)
             if signal == 0 :
-                messagebox.showinfo("publish success")
+                messagebox.showinfo("pulish","publish success")
             elif signal == 1 : 
-                messagebox.showerror(f"Path {file_path} does not exist")
+                messagebox.showerror("error",f"Path {file_path} does not exist")
             else :
-                messagebox.showerror(f"{file_path} is not a file")
+                messagebox.showerror("error",f"{file_path} is not a file")
 
         def fetch_info_file(service_url = BASE_URL, hash_info = None):
             response = service.fetch_file(BASE_URL,hash_info)
@@ -142,7 +145,6 @@ class App:
                             )
                             table.insert( parent="", index = tk.END, values=value)
 
-
         tk.Button(self.main_frame, text="Publish File", command=lambda:publish_file(), width=15).pack(pady=10)
 
         # UI for FETCH
@@ -169,27 +171,38 @@ class App:
         table.pack(pady=10)
 
 
-        def download_file(magnet):
-            service.download(magnet)
+        
 
 
         # UI for DOWNLOAD
-        dowload_frame = tk.Frame(self.main_frame)
-        dowload_frame.pack(pady=10)
 
-        dowload_hash_info_entry = tk.Entry(dowload_frame, width=50)
-        dowload_hash_info_entry.pack(side=tk.LEFT, padx=5)
+        download_button = tk.Button(self.main_frame, text="Download File", command=lambda: download_file() ,width=15)
+        download_button.pack(pady=10)
 
-        download_button = tk.Button(dowload_frame, text="Download File", command=lambda: download_file(dowload_hash_info_entry.get()) ,width=15)
-        download_button.pack(side=tk.LEFT)
+        def on_item_select(event):
+            selected = table.selection()
+            if selected:
+                self.selected_item = table.item(selected[0])["values"]
+            else:
+                self.selected_item = None
 
+        table.bind("<<TreeviewSelect>>", on_item_select)
+
+        def download_file():
+            if self.selected_item:
+                print (self.selected_item[0])
+                service.download(self.selected_item[0], BASE_URL)
+            else:
+                messagebox.showwarning("Cảnh báo", "Vui lòng chọn một hàng trước khi nhấn Print!")
 
         def logout ():
             self.create_main_page()
         
         tk.Button(self.main_frame, text="Đăng xuất", command=logout, width=15).pack(pady=5)
 
-#######
+        
+#   #   #   #   #   #   #   #   #   #   #   #   #   #   #   #
+#   #   #   #   #   #   #   #   #   #   #   #   #   #   #   #
 
 
 
