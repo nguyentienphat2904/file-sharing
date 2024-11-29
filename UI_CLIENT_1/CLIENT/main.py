@@ -13,7 +13,8 @@ from queue import Queue
 import random
 from prettytable import PrettyTable
 
-HOST = socket.gethostbyname(socket.gethostname())
+# HOST = socket.gethostbyname(socket.gethostname())
+HOST = '127.0.0.1'
 PORT = 65431
 
 load_dotenv()
@@ -54,13 +55,13 @@ def handle_request(client_socket):
                 'pieces_status': []
             }
 
-            with open('file_status.json', 'r') as f:
+            with open('CLIENT/file_status.json', 'r') as f:
                 data = json.load(f)
 
             if not hash_info in data or not data[hash_info]:
                 client_socket.sendall(json.dumps(response).encode('utf-8'))
                 return
-            file_name = f"store/{data[hash_info]['name']}"
+            file_name = f"CLIENT/store/{data[hash_info]['name']}"
             
             response = {
                 'type': 'FILE_STATUS',
@@ -81,13 +82,13 @@ def handle_request(client_socket):
                 'chunk_data': chunk_data
             }
 
-            with open('file_status.json', 'r') as f:
+            with open('CLIENT/file_status.json', 'r') as f:
                 data = json.load(f)
 
             if not data[hash_info]:
                 client_socket.sendall(json.dumps(response).encode('utf-8'))
                 return
-            file_name = f"store/{data[hash_info]['name']}"
+            file_name = f"CLIENT/store/{data[hash_info]['name']}"
             
             try:
                 with open(file_name, "rb") as f:
@@ -184,7 +185,7 @@ def download(magnet) :
 def download(hash_info, tracker_urls):
     file_name, file_size, peers_keep_file = helper.get_file_info_and_peers_keep_file(hash_info, tracker_urls)
 
-    file_path = f"store/{file_name}"
+    file_path = f"CLIENT/store/{file_name}"
 
     num_of_pieces = math.ceil(file_size / int(PIECE_SIZE))
 
@@ -277,7 +278,7 @@ def download(hash_info, tracker_urls):
     def update_file_status():
         with file_status_lock:
             try:
-                with open('file_status.json', 'r') as f:
+                with open('CLIENT/file_status.json', 'r') as f:
                     file_status_data = json.load(f)
                     if not file_status_data.get(hash_info):
                         file_status_data[hash_info] = {
@@ -287,7 +288,7 @@ def download(hash_info, tracker_urls):
                     else:
                         file_status_data[hash_info]['piece_status'] = piece_has_been_downloaded
 
-                with open('file_status.json', 'w') as json_file:
+                with open('CLIENT/file_status.json', 'w') as json_file:
                     json.dump(file_status_data, json_file, indent=4)
             except FileNotFoundError:
                 print('File file_status.json does not exist')
@@ -321,7 +322,14 @@ def publish(file_path, tracker_urls):
     num_of_pieces = math.ceil(int(os.path.getsize(file_path)) / int(PIECE_SIZE))
     file_name = os.path.basename(file_path).split('/')
     piece_status = [1 for _ in range(num_of_pieces)]
-    with open('file_status.json', 'r') as f:
+    file_path_status = 'CLIENT/file_status.json'
+
+    if not os.path.exists(file_path):
+        with open(file_path, 'w') as f:
+            json.dump({}, f)
+
+    
+    with open(file_path_status, 'r') as f:
         file_status_data = json.load(f)
         if not file_status_data.get(hash_info):
             file_status_data[hash_info] = {
@@ -331,7 +339,7 @@ def publish(file_path, tracker_urls):
         else:
             file_status_data[hash_info]['piece_status'] = piece_status
 
-    with open('file_status.json', 'w') as json_file:
+    with open('CLIENT/file_status.json', 'w') as json_file:
         json.dump(file_status_data, json_file, indent=4)
         
     return helper.publish_file(tracker_urls, os.path.basename(file_path), int(os.path.getsize(file_path)), hash_info, HOST, PORT)

@@ -191,7 +191,12 @@ class App:
         def download_file():
             if self.selected_item:
                 print (self.selected_item[0])
+                start_time = time.time()
                 service.download(self.selected_item[0], BASE_URL)
+                end_time = time.time()
+                execution_time = end_time - start_time
+
+                print(f"Thời gian thực hiện hàm download là {execution_time} giây") 
             else:
                 messagebox.showwarning("Cảnh báo", "Vui lòng chọn một hàng trước khi nhấn Print!")
 

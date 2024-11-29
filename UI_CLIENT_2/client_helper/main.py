@@ -53,8 +53,8 @@ def get_file_info_and_peers_keep_file(hash_info, tracker_urls):
     file_name = None
     file_size = None
     
-    for tracker_url in tracker_urls:
-        response = fetch_file_by_hash_info(tracker_url, hash_info)
+    if (tracker_urls):
+        response = fetch_file_by_hash_info(tracker_urls, hash_info)
         if response and response.status_code == 200:
             data = response.json().get('data')
             file = data[0] if len(data) > 0 else None
