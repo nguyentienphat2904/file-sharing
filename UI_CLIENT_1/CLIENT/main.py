@@ -12,9 +12,11 @@ import math
 from queue import Queue
 import random
 from prettytable import PrettyTable
+from urllib.parse import parse_qs, urlparse, urlencode
 
-# HOST = socket.gethostbyname(socket.gethostname())
-HOST = '127.0.0.1'
+
+HOST = socket.gethostbyname(socket.gethostname())
+# HOST = '127.0.0.1'
 PORT = 65431
 
 load_dotenv()
@@ -43,7 +45,7 @@ def stop_peer_server():
 
 def handle_request(client_socket):
     with client_socket:
-        data = client_socket.recv(1024).decode('utf-8')
+        data = client_socket.recv(4096).decode('utf-8')
         request = json.loads(data)
 
         if request['type'] == 'GET_FILE_STATUS':
@@ -161,26 +163,51 @@ def connect_to_peer_and_download_file_chunk(peer_ip, peer_port, hash_info, chunk
         else:
             print("Has been received invalid response from peer")
 
-def download(magnet) :
-    def parse_text(input_text):
-        try:
-            # Tách chuỗi bằng dấu '&'
-            parts = input_text.split('&')
-            result = {}
-            
-            # Duyệt qua từng phần và tách thành key-value
-            for part in parts:
-                key, value = part.split('=', 1)  # Tách theo dấu '='
-                result[key] = value
-            
-            # Trả về các giá trị xt, dn, tr
-            return result.get('xt', None), result.get('dn', None), result.get('tr', None)
+
+
+class MagnetLink:
+    def __init__(self, hash_info: str, name: str, tracker_url: str):
+        self.hash_info = hash_info
+        self.name = name
+        self.tracker_url = tracker_url
+
+    def to_magnet(self) -> str:    
+        return f"magnet:?xt=urn:btih:{self.hash_info}&dn={self.name}&tr={self.tracker_url}"
+
+    @classmethod
+    def from_magnet(cls, magnet: str):
+        if not magnet.startswith("magnet:?"):
+            raise ValueError("Chuỗi không đúng định dạng magnet.")
+        
+        query = magnet[len("magnet:?"):]
+        params = dict(param.split("=", 1) for param in query.split("&") if "=" in param)
+        
+        xt = params.get("xt", "")
+        if xt.startswith("urn:btih:"):
+            hash_info = xt[len("urn:btih:"):]
+        else:
+            hash_info = ""
+        name = params.get("dn", "")
+        tracker_url = params.get("tr", "")
+        
+        return cls(hash_info, name, tracker_url)
     
-        except Exception as e:
-            print(f"Error parsing text: {e}")
-            return None, None, None
-    hash_info, tmp, tracker_urls = parse_text(magnet)
-    download(hash_info, tracker_urls)
+    def de_magnet(self) :
+        return self.hash_info, self.name, self.tracker_url
+
+
+def create_magnet(hash_info, name, tracker_url):
+    magnetLink = MagnetLink(hash_info,name, tracker_url)
+    return magnetLink.to_magnet()
+
+        
+def download_from_magnet(magnet) :    
+    magnetLink = MagnetLink.from_magnet(magnet)
+    hash_info, tmp, tracker_urls = magnetLink.de_magnet()
+    print(magnetLink.de_magnet())
+    # download(hash_info, tracker_urls)
+
+
 
 def download(hash_info, tracker_urls):
     file_name, file_size, peers_keep_file = helper.get_file_info_and_peers_keep_file(hash_info, tracker_urls)
@@ -298,6 +325,12 @@ def download(hash_info, tracker_urls):
     helper.publish_file(tracker_urls, file_name, file_size, hash_info, address=HOST, port=PORT)
     print('Download and announce server successfully')
 
+
+def fetch():
+    with open('CLIENT/file_status.json', 'r') as file:
+        data = json.load(file)
+    print(data)
+    return data
 
 def fetch_file(server_url, hash_info):
     response = None

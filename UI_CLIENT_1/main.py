@@ -10,6 +10,7 @@ import time
 
 from CLIENT import main as service
 from ui_helper import main as auth
+import json 
 
 
 WIN_WIDTH  = 720
@@ -96,72 +97,27 @@ class App:
             else :
                 messagebox.showerror("error",f"{file_path} is not a file")
 
-        def fetch_info_file(service_url = BASE_URL, hash_info = None):
-            response = service.fetch_file(BASE_URL,hash_info)
-
-            if response and response.status_code == 200 and response.json() and response.json()['data']:
-                for item in table.get_children():
-                    table.delete(item)
-                if(hash_info):
-                    data = response.json()['data'][0]
-                    peers = data.get('peers', [])
-                    peers_str = ', '.join([f"{peer['address']}:{peer['port']}" for peer in peers])
-
-                    if(peers):
-                        value = (
-                            data.get('hash_info'), 
-                            data.get('name'), 
-                            data.get('size'), 
-                            peers_str
-                        )
-                        table.insert( parent="", index = 0, values=value)
-                    else:
-                        value = (
-                            data.get('hash_info'), 
-                            data.get('name'), 
-                            data.get('size'), 
-                            "No peers"
-                        )
-                        table.insert( parent="", index = tk.END, values=value)
-                        
-                else:
-                    for item in response.json()['data']:
-                        peer = item.get('peer', [])
-                        
-                        if peer :
-                            value = (
-                                item.get('hash_info'), 
-                                item.get('name'), 
-                                item.get('size'), 
-                                f"{peer.get('address')}:{peer.get('port')}"
-                            )
-                            table.insert( parent="", index = tk.END, values=value)
-                        else:
-                            value = (
-                                item.get('hash_info'), 
-                                item.get('name'), 
-                                item.get('size'), 
-                                "No peers"
-                            )
-                            table.insert( parent="", index = tk.END, values=value)
+        def fetch_info_file():
+            data = service.fetch()
+            for item in table.get_children():
+                table.delete(item)
+            for hash_info, item in data.items():
+                if hash_info and item :
+                    value = (
+                        hash_info, 
+                        item['name']
+                    )
+                    table.insert( parent="", index = tk.END, values=value)
 
         tk.Button(self.main_frame, text="Publish File", command=lambda:publish_file(), width=15).pack(pady=10)
 
         # UI for FETCH
-        fetch_frame = tk.Frame(self.main_frame)
-        fetch_frame.pack(pady=10)
-
-        fetch_hash_info_entry = tk.Entry(fetch_frame, width=50)
-        fetch_hash_info_entry.pack(side=tk.LEFT, padx=5)  # Đặt Entry ở bên trái
-
-        fetch_button = tk.Button(fetch_frame, text="Fetch File", command=lambda: fetch_info_file(hash_info=fetch_hash_info_entry.get()), width=15)
-        fetch_button.pack(side=tk.LEFT)
+        fetch_button = tk.Button(self.main_frame, text="Fetch File", command=lambda: fetch_info_file(), width=15)
+        fetch_button.pack(pady=10)
 
         columns = (
-            ('Info_Hash', WIN_WIDTH / 2),
-            ('Name', WIN_WIDTH / 6), 
-            ('Sizes (bytes)', WIN_WIDTH / 6),
-            ('Peer', WIN_WIDTH / 6),
+            ('Info_Hash', WIN_WIDTH / 4*3),
+            ('Name', WIN_WIDTH /4 ), 
         )
         table = ttk.Treeview(self.main_frame, columns = [x[0] for x in columns], show = 'headings' )
 
@@ -171,13 +127,27 @@ class App:
         table.pack(pady=10)
 
 
-        
+        # UI for CREATE MAGNET
+        create_magnet_frame = tk.Frame(self.main_frame)
+        create_magnet_frame.pack(pady = 10)
+
+        create_magnet_entry = tk.Entry(create_magnet_frame, width=50)
+        create_magnet_entry.pack(side=tk.LEFT, padx = 5 )
+
+        create_magnet_button = tk.Button(create_magnet_frame, text="Create Magnet", command = lambda:create_magnet(), width=15)
+        create_magnet_button.pack(side=tk.LEFT)
 
 
         # UI for DOWNLOAD
+        download_frame = tk.Frame(self.main_frame)
+        download_frame.pack(pady = 10)
 
-        download_button = tk.Button(self.main_frame, text="Download File", command=lambda: download_file() ,width=15)
-        download_button.pack(pady=10)
+        download_entry = tk.Entry(download_frame, width = 50)
+        download_entry.pack(side = tk.LEFT, padx = 5)
+
+        download_button = tk.Button(download_frame, text="Download File", command=lambda: download_file(download_entry.get()) ,width=15)
+        download_button.pack(side = tk.LEFT)
+
 
         def on_item_select(event):
             selected = table.selection()
@@ -188,22 +158,31 @@ class App:
 
         table.bind("<<TreeviewSelect>>", on_item_select)
 
-        def download_file():
-            if self.selected_item:
-                print (self.selected_item[0])
+
+        def create_magnet():
+            magnet_url = service.create_magnet(self.selected_item[0], self.selected_item[1], BASE_URL)
+            create_magnet_entry.delete(0, tk.END)
+            create_magnet_entry.insert(0, magnet_url)
+            
+
+        def download_file(magnet):
+            magnet = create_magnet_entry.get()
+            if magnet:
                 start_time = time.time()
-                service.download(self.selected_item[0], BASE_URL)
+                service.download_from_magnet(magnet)
                 end_time = time.time()
                 execution_time = end_time - start_time
 
                 print(f"Thời gian thực hiện hàm download là {execution_time} giây") 
             else:
-                messagebox.showwarning("Cảnh báo", "Vui lòng chọn một hàng trước khi nhấn Print!")
+                messagebox.showwarning("Cảnh báo", "Vui lòng nhập link magnet!")
 
-        def logout ():
-            self.create_main_page()
+
+
+        # def logout ():
+        #     self.create_main_page()
         
-        tk.Button(self.main_frame, text="Đăng xuất", command=logout, width=15).pack(pady=5)
+        # tk.Button(self.main_frame, text="Đăng xuất", command=logout, width=15).pack(pady=5)
 
         
 #   #   #   #   #   #   #   #   #   #   #   #   #   #   #   #
