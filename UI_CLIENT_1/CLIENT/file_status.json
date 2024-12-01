@@ -12,6 +12,17 @@
         "piece_status": [
             1
         ]
+    },
+    "97fe15a769344d36d367ba97b9a1069633123762": {
+        "name": ".env",
+        "piece_status": [
+            1
+        ]
+    },
+    "c724310e66ef7caf35d97fcac5a5de4e0bd38297": {
+        "name": "abc.docx",
+        "piece_status": [
+            1
+        ]
     }
-
 }
