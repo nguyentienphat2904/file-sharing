@@ -1,27 +1,53 @@
 {
-    "a25c0bb6fee945c5bb94d59c3cfe63c972ae09b1": {
-        "hash_info": "a25c0bb6fee945c5bb94d59c3cfe63c972ae09b1",
-        "name": "test1.txt",
+    "8cb2237d0679ca88db6464eac60da96345513964": {
+        "name": "file2.txt",
         "piece_status": [
             1
         ]
     },
-    "a25c0bb6fee945c5bb94d59c3cfe63c972ae09b12": {
-        "hash_info": "a25c0bb6fee945c5bb94d59c3cfe63c972ae09b12",
-        "name": "test.txt",
+    "6ee3d027dbf3b283f4336c8ef2ef882e4f0b49ae": {
+        "name": "Software Engineering - Ian Sommerville.pdf",
         "piece_status": [
+            1,
+            1,
+            1,
             1
         ]
     },
-    "97fe15a769344d36d367ba97b9a1069633123762": {
-        "name": ".env",
+    "516612bd050c038cf54f4feef00db03108822e30": {
+        "name": "5448C975-0EB1-43B6-B3CF-D386F173676F.mov",
         "piece_status": [
-            1
-        ]
-    },
-    "c724310e66ef7caf35d97fcac5a5de4e0bd38297": {
-        "name": "abc.docx",
-        "piece_status": [
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
             1
         ]
     }

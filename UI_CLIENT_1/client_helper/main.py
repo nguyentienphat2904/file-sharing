@@ -44,32 +44,35 @@ def initial_hash_info(file_path, hash_algorithm = 'sha1'):
 
 def fetch_file_by_hash_info(base_url, hash_info):
     try:
-        return requests.get(f'{base_url}/api/files/fetch?hash_info={hash_info}')
+        response = requests.get(f'{base_url}/api/files/fetch?hash_info={hash_info}')
+        return response
     except:
         return None
 
-def get_file_info_and_peers_keep_file(hash_info, tracker_urls):
+def get_file_info_and_peers_keep_file(hash_info, tracker_url):
     peers_keep_file = []
     file_name = None
     file_size = None
-    
-    if (tracker_urls):
-        response = fetch_file_by_hash_info(tracker_urls, hash_info)
-        if response and response.status_code == 200:
-            data = response.json().get('data')
-            file = data[0] if len(data) > 0 else None
-            if file:
-                if not file_name:
-                    if 'name' in file:
-                        file_name = file['name']
-                if  not file_size:
-                    if 'size' in file:
-                        file_size = file['size']
-                if 'peers' in file and len(file['peers']) > 0:
-                    peers = [(peer['address'], peer['port']) for peer in file['peers']]
-                    peers_keep_file.extend(peers)
-    
-    return file_name, file_size, set(peers_keep_file)
+    print(tracker_url)
+    try: 
+        response = fetch_file_by_hash_info(tracker_url, hash_info) 
+        print('response: ', response) 
+        if response and response.status_code == 200: 
+            data = response.json().get('data') 
+            if data: 
+                file = data[0] if len(data) > 0 else None 
+                if file: 
+                    if 'name' in file: 
+                        file_name = file['name'] 
+                    if 'size' in file: 
+                        file_size = file['size'] 
+                    if 'peers' in file and len(file['peers']) > 0: 
+                        peers = [(peer['address'], peer['port']) for peer in file['peers']] 
+                        peers_keep_file.extend(peers) 
+        return file_name, file_size, set(peers_keep_file) 
+    except Exception as e: 
+        print(f"Error: {e}") 
+        return None, None, set()
 
 def announce_downloaded(base_url, file_hash_info, file_name, file_size, peer_id):
     return requests.post(f'{base_url}/api/files/publish', {

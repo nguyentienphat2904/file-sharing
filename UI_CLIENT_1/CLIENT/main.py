@@ -13,6 +13,7 @@ from queue import Queue
 import random
 from prettytable import PrettyTable
 from urllib.parse import parse_qs, urlparse, urlencode
+import struct
 
 
 HOST = socket.gethostbyname(socket.gethostname())
@@ -20,7 +21,17 @@ HOST = socket.gethostbyname(socket.gethostname())
 PORT = 65431
 
 load_dotenv()
-PIECE_SIZE = int(os.getenv('PIECE_SIZE', '512'))
+piece_size_str = os.getenv('PIECE_SIZE', '512')
+
+# Xử lý biểu thức an toàn
+try:
+    # Giới hạn phép tính cho số học cơ bản
+    import ast
+    PIECE_SIZE = int(eval(piece_size_str, {"__builtins__": None}, {}))
+except (SyntaxError, ValueError, TypeError):
+    PIECE_SIZE = 512  # Giá trị mặc định
+
+print(PIECE_SIZE)
 
 stop_event = threading.Event()
 
@@ -112,6 +123,8 @@ def handle_request(client_socket):
             }
             client_socket.sendall(json.dumps(response).encode('utf-8'))
 
+
+
 def connect_to_peer_and_get_file_status(peer_ip, peer_port, hash_info):
     try:
         with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
@@ -141,27 +154,42 @@ def connect_to_peer_and_download_file_chunk(peer_ip, peer_port, hash_info, chunk
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
         s.connect((peer_ip, int(peer_port)))
         print(f"Connected to {peer_ip}:{peer_port}")
-        
+
+        # Gửi yêu cầu lấy chunk dữ liệu
         request = {
             'type': 'GET_FILE_CHUNK',
             'hash_info': hash_info,
             'chunk_list': chunk_list
         }
-
         s.sendall(json.dumps(request).encode('utf-8'))
-        
-        response_data = s.recv(4096)
-        response = json.loads(response_data.decode('utf-8'))
-        if response['type'] == 'FILE_CHUNK' and response['hash_info'] == hash_info:
-            chunk_data = response['chunk_data']
-            
-            with open(file_path, "r+b") as f:  
-                for i, chunk in enumerate(chunk_data):
-                    f.seek(chunk_list[i] * PIECE_SIZE)
-                    f.write(chunk.encode('latin1'))
-                    print(f"Chunk {chunk_list[i]} has been written into file")
-        else:
-            print("Has been received invalid response from peer")
+
+        # Nhận dữ liệu phản hồi
+        response_data = b""
+        while True:
+            packet = s.recv(4096)
+            if not packet:
+                break
+            response_data += packet
+
+        try:
+            # Giải mã dữ liệu JSON
+            response = json.loads(response_data.decode('utf-8'))
+            if response['type'] == 'FILE_CHUNK' and response['hash_info'] == hash_info:
+                chunk_data = response['chunk_data']
+
+                # Ghi các phần (chunks) vào file
+                with open(file_path, "r+b") as f:
+                    for i, chunk in enumerate(chunk_data):
+                        f.seek(chunk_list[i] * PIECE_SIZE)
+                        f.write(chunk.encode('latin1'))  # Sử dụng encoding 'latin1' cho dữ liệu nhị phân
+                        print(f"Chunk {chunk_list[i]} has been written into file")
+            else:
+                print("Received invalid response from peer")
+
+        except json.JSONDecodeError as e:
+            print(f"Error decoding response: {e}")
+        except Exception as e:
+            print(f"Unexpected error: {e}")
 
 
 
@@ -205,7 +233,7 @@ def download_from_magnet(magnet) :
     magnetLink = MagnetLink.from_magnet(magnet)
     hash_info, tmp, tracker_urls = magnetLink.de_magnet()
     print(magnetLink.de_magnet())
-    # download(hash_info, tracker_urls)
+    download(hash_info, tracker_urls)
 
 
 
@@ -376,8 +404,3 @@ def publish(file_path, tracker_urls):
         json.dump(file_status_data, json_file, indent=4)
         
     return helper.publish_file(tracker_urls, os.path.basename(file_path), int(os.path.getsize(file_path)), hash_info, HOST, PORT)
-
-    
-
-
-        

@@ -166,7 +166,7 @@ class App:
             
 
         def download_file(magnet):
-            magnet = create_magnet_entry.get()
+            magnet = download_entry.get()
             if magnet:
                 start_time = time.time()
                 service.download_from_magnet(magnet)
